@@ -160,6 +160,29 @@ final class DParse {
     }
   }
 
+  static final _converters = <Type, dynamic Function(dynamic)>{};
+
+  /// Register a custom converter for a specific type [T].
+  ///
+  /// This allows [to] to dynamically handle custom types and their [List] variants.
+  ///
+  /// ```dart
+  /// DParse.register<User>((v) => User.fromJson(v));
+  /// final user = DParse.to<User>(json); // Works!
+  /// final users = DParse.to<List<User>>(jsonList); // Also works!
+  /// ```
+  static void register<T>(T Function(dynamic value) converter) {
+    _converters[T] = (v) => converter(v);
+    // Automatically register the List variant if it doesn't exist
+    final listType = typeOf<List<T>>();
+    if (!_converters.containsKey(listType)) {
+      _converters[listType] = (v) => mayToList<T>(v);
+    }
+    // Also register the nullable variants if appropriate
+    _converters[typeOf<T?>()] = (v) => converter(v);
+    _converters[typeOf<List<T>?>()] = (v) => mayToList<T>(v);
+  }
+
   /// Parsing message error of [Exception].
   ///
   ///  ```dart
@@ -170,55 +193,180 @@ final class DParse {
   static String exceptionMessage(dynamic value) {
     switch (value.toString()) {
       case 'FormatException: Unexpected end of input (at character 1)\n\n^\n':
-        return 'Data is not exist';
+        return 'Data does not exist';
       case 'Null check operator used on a null value':
-        return 'Data is not exist';
+        return 'Data does not exist';
       case 'Bad state: No element':
-        return 'Data is not exist';
+        return 'Data does not exist';
       default:
         return value.toString();
     }
   }
 
-  static T to<T extends dynamic>(dynamic value, [T? onError]) {
+  static T to<T>(dynamic value, [T? onError]) {
     try {
-      if ('$T' == 'int') {
-        return toInt(value, onError as int?) as T;
-      } else if ('$T' == 'double') {
-        return toDouble(value, onError as double?) as T;
-      } else if ('$T' == 'bool') {
-        return toBool(value, onError as bool?) as T;
-      } else if ('$T' == 'DateTime') {
-        return toDate(value, onError as DateTime?) as T;
-      } else if ('$T' == 'String') {
-        return toText(value, onError as String?) as T;
-      } else if ('$T'.startsWith('Map') && !'$T'.endsWith('?')) {
-        return toMap(value, onError as Map?) as T;
-      } else if ('$T'.startsWith('List') && !'$T'.endsWith('?')) {
-        return toList(value, onError as List?) as T;
-      } else if ('$T' == 'int?') {
-        return (mayToInt(value ?? onError)) as T;
-      } else if ('$T' == 'double?') {
-        return (mayToDouble(value) ?? onError) as T;
-      } else if ('$T' == 'bool?') {
-        return (mayToBool(value) ?? onError) as T;
-      } else if ('$T' == 'DateTime?') {
-        return (mayToDate(value) ?? onError) as T;
-      } else if ('$T' == 'String?') {
-        return (mayToText(value) ?? onError) as T;
-      } else if ('$T'.startsWith('Map') && '$T'.endsWith('?')) {
-        return (mayToMap(value) ?? onError) as T;
-      } else if ('$T'.startsWith('List') && '$T'.endsWith('?')) {
-        return (mayToList(value) ?? onError) as T;
-      } else {
-        if (value is T) return value;
-        return onError as T;
+      // 1. Fast path: If value is already T, return it (except for nulls if onError is provided).
+      if (value is T && (value != null || onError == null)) return value;
+
+      // 2. Type-based checks for clean, recursive primitive handling
+      // Core types that should be returned as-is
+      if (T == dynamic || T == Object) return value as T;
+      if (T == num) return (mayToDouble(value) ?? (onError as num?) ?? 0.0) as T;
+
+      // Primitives & Nullables
+      if (T == int) return toInt(value, onError as int?) as T;
+      if (T == typeOf<int?>()) return (mayToInt(value) ?? onError as int?) as T;
+      if (T == double) return toDouble(value, onError as double?) as T;
+      if (T == typeOf<double?>())
+        return (mayToDouble(value) ?? onError as double?) as T;
+      if (T == bool) return toBool(value, onError as bool?) as T;
+      if (T == typeOf<bool?>())
+        return (mayToBool(value) ?? onError as bool?) as T;
+      if (T == String) return toText(value, onError as String?) as T;
+      if (T == typeOf<String?>())
+        return (mayToText(value) ?? onError as String?) as T;
+      if (T == DateTime) return toDate(value, onError as DateTime?) as T;
+      if (T == typeOf<DateTime?>())
+        return (mayToDate(value) ?? onError as DateTime?) as T;
+
+      // JSON & Maps
+      if (T == JSON || T == Map<String, dynamic>) {
+        return toJSON(value, onError as JSON?) as T;
       }
+      if (T == typeOf<JSON?>() || T == typeOf<Map<String, dynamic>?>()) {
+        return (mayToJSON(value) ?? onError as JSON?) as T;
+      }
+
+      // Recursive Lists (Must have defaults)
+      if (T == typeOf<List<int>>()) {
+        return toList<int>(value, onError as List<int>?) as T;
+      }
+      if (T == typeOf<List<int>?>()) {
+        return (mayToList<int>(value) ?? onError as List<int>?) as T;
+      }
+      if (T == typeOf<List<double>>()) {
+        return toList<double>(value, onError as List<double>?) as T;
+      }
+      if (T == typeOf<List<double>?>()) {
+        return (mayToList<double>(value) ?? onError as List<double>?) as T;
+      }
+      if (T == typeOf<List<bool>>()) {
+        return toList<bool>(value, onError as List<bool>?) as T;
+      }
+      if (T == typeOf<List<bool>?>()) {
+        return (mayToList<bool>(value) ?? onError as List<bool>?) as T;
+      }
+      if (T == typeOf<List<String>>()) {
+        return toList<String>(value, onError as List<String>?) as T;
+      }
+      if (T == typeOf<List<String>?>()) {
+        return (mayToList<String>(value) ?? onError as List<String>?) as T;
+      }
+      if (T == typeOf<List<JSON>>()) {
+        return toList<JSON>(value, onError as List<JSON>?) as T;
+      }
+      if (T == typeOf<List<JSON>?>()) {
+        return (mayToList<JSON>(value) ?? onError as List<JSON>?) as T;
+      }
+
+      // Dynamic collections
+      if (T == typeOf<List<dynamic>>()) {
+        return toList<dynamic>(value, onError as List<dynamic>?) as T;
+      }
+      if (T == typeOf<List<dynamic>?>()) {
+        return (mayToList<dynamic>(value) ?? onError as List<dynamic>?) as T;
+      }
+      if (T == typeOf<Map<dynamic, dynamic>>()) {
+        return toMap<dynamic, dynamic>(
+            value, onError as Map<dynamic, dynamic>?) as T;
+      }
+      if (T == typeOf<Map<dynamic, dynamic>?>()) {
+        return (mayToMap<dynamic, dynamic>(value) ??
+            onError as Map<dynamic, dynamic>?) as T;
+      }
+
+      // Nested Lists (Deep Recursion requested)
+      if (T == typeOf<List<List<int>>>()) {
+        return toList<List<int>>(value, onError as List<List<int>>?) as T;
+      }
+      if (T == typeOf<List<List<int>>?>()) {
+        return (mayToList<List<int>>(value) ?? onError as List<List<int>>?) as T;
+      }
+      if (T == typeOf<List<List<String>>>()) {
+        return toList<List<String>>(value, onError as List<List<String>>?) as T;
+      }
+      if (T == typeOf<List<List<String>>?>()) {
+        return (mayToList<List<String>>(value) ??
+            onError as List<List<String>>?) as T;
+      }
+
+      // Recursive Maps (Requested map<int>, map<double> so on)
+      if (T == typeOf<Map<String, int>>()) {
+        return toMap<String, int>(value, onError as Map<String, int>?) as T;
+      }
+      if (T == typeOf<Map<String, int>?>()) {
+        return (mayToMap<String, int>(value) ?? onError as Map<String, int>?)
+            as T;
+      }
+      if (T == typeOf<Map<String, double>>()) {
+        return toMap<String, double>(value, onError as Map<String, double>?)
+            as T;
+      }
+      if (T == typeOf<Map<String, double>?>()) {
+        return (mayToMap<String, double>(value) ??
+            onError as Map<String, double>?) as T;
+      }
+      if (T == typeOf<Map<String, bool>>()) {
+        return toMap<String, bool>(value, onError as Map<String, bool>?) as T;
+      }
+      if (T == typeOf<Map<String, bool>?>()) {
+        return (mayToMap<String, bool>(value) ?? onError as Map<String, bool>?)
+            as T;
+      }
+      if (T == typeOf<Map<String, String>>()) {
+        return toMap<String, String>(value, onError as Map<String, String>?)
+            as T;
+      }
+      if (T == typeOf<Map<String, String>?>()) {
+        return (mayToMap<String, String>(value) ??
+            onError as Map<String, String>?) as T;
+      }
+
+      // 3. Fallback to Registry for custom types or string-based matching for complex generics
+      final converter = _converters[T];
+      if (converter != null) {
+        return (converter(value) ?? onError) as T;
+      }
+
+      final typeStr = T.toString();
+
+
+      // 4. Default dynamic handling for unregistered collections
+      if (typeStr.startsWith('List')) {
+        final isNullable = typeStr.endsWith('?');
+        return (isNullable
+            ? (mayToList(value) ?? onError)
+            : toList(value, onError as List?)) as T;
+      }
+      if (typeStr.startsWith('Map')) {
+        final isNullable = typeStr.endsWith('?');
+        return (isNullable
+            ? (mayToMap(value) ?? onError)
+            : toMap(value, onError as Map?)) as T;
+      }
+
+      // 5. Last resort: return value if it matches, or handle fallback
+      return (onError ?? (null is T ? null : value)) as T;
     } catch (e, s) {
       DLog({'error': e, 'stacktrace': s}.toString(), level: DLevel.error);
+      if (onError is T) return onError;
       return onError as T;
     }
   }
+
+  /// Helper to get a [Type] literal for complex generic types.
+  static Type typeOf<U>() => U;
+
 
   static int toInt(dynamic value, [int? onError]) {
     return mayToInt(value) ?? onError ?? 0;
@@ -240,6 +388,10 @@ final class DParse {
     return mayToText(value) ?? onError ?? '';
   }
 
+  static JSON toJSON(dynamic value, [JSON? onError]) {
+    return mayToJSON(value) ?? onError ?? <String, dynamic>{};
+  }
+
   static List<U> toList<U extends dynamic>(dynamic value, [List<U>? onError]) {
     return mayToList<U>(value) ?? onError ?? <U>[];
   }
@@ -253,12 +405,32 @@ final class DParse {
 
   static int? mayToInt(dynamic value) {
     if (value is int) return value;
-    return int.tryParse(value?.toString() ?? '');
+    if (value is num) return value.toInt();
+    final str = value?.toString() ?? '';
+    return int.tryParse(str) ?? double.tryParse(str)?.toInt();
   }
 
   static double? mayToDouble(dynamic value) {
     if (value is double) return value;
     return double.tryParse(value?.toString() ?? '');
+  }
+
+  static JSON? mayToJSON(dynamic value) {
+    if (value is JSON) return value;
+    if (value is Map) {
+      return <String, dynamic>{
+        for (var entry in value.entries) entry.key.toString(): entry.value
+      };
+    }
+    if (value is String) {
+      try {
+        final decoded = jsonDecode(value);
+        if (decoded is JSON) return decoded;
+      } catch (e) {
+        return null;
+      }
+    }
+    return null;
   }
 
   static bool? mayToBool(dynamic value) {

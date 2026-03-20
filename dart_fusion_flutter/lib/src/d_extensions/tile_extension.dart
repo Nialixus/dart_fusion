@@ -40,7 +40,7 @@ extension TileExtension on ExpansionTile {
     ShapeBorder? collapsedShape,
     Clip? clipBehavior,
     ListTileControlAffinity? controlAffinity,
-    ExpansionTileController? controller,
+    ExpansibleController? controller,
   }) {
     return ExpansionTile(
       key: key ?? this.key,

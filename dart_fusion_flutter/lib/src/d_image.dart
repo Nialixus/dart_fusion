@@ -204,7 +204,7 @@ class DImage<Source extends Object> extends StatelessWidget {
               return _fromBitmapMemory();
             }
           } else {
-            String data = this.source.toString();
+            String data = source.toString();
             if (data.startsWith("http")) {
               if (data.endsWith(".svg")) return _fromVectorNetwork();
               return _fromBitmapNetwork();
@@ -212,7 +212,7 @@ class DImage<Source extends Object> extends StatelessWidget {
               if (data.startsWith('data:image/svg')) return _fromVectorMemory();
               return _fromBitmapMemory();
             } else {
-              String data = this.source.toString();
+              String data = source.toString();
               if (data.endsWith(".svg")) return _fromVectorAsset();
               return _fromBitmapAsset();
             }

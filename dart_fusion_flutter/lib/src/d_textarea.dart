@@ -133,7 +133,7 @@ class DTextArea extends StatelessWidget {
               decoration: decoration ??
                   BoxDecoration(
                     color: backgroundColor ??
-                        context.color.surface.withOpacity(0.5),
+                        context.color.surface.withValues(alpha: 0.5),
                     borderRadius: borderRadius,
                   ),
               child: Column(
@@ -161,7 +161,7 @@ class DTextArea extends StatelessWidget {
                             hintStyle: hintStyle ??
                                 context.text.bodyMedium?.copyWith(
                                     color: context.color.onSurface
-                                        .withOpacity(0.5),
+                                        .withValues(alpha: 0.5),
                                     height: 0.0),
                             focusedBorder: OutlineInputBorder(
                                 borderSide: borderSideActive ??
