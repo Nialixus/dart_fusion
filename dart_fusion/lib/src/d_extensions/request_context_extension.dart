@@ -18,7 +18,8 @@ extension OnRequestContext on RequestContext {
   bool get isPUT => method == HttpMethod.put;
 
   /// Check whether request is a http request or websocket request.
-  bool get isWebSocket => request.url.toString().startsWith('ws');
+  bool get isWebSocket =>
+      request.headers['Upgrade']?.toLowerCase() == 'websocket';
 
   /// A shortcut to get parameter from [RequestContext].
   JSON get parameter => request.uri.queryParameters;

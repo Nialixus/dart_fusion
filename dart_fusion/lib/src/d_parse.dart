@@ -412,6 +412,7 @@ final class DParse {
 
   static double? mayToDouble(dynamic value) {
     if (value is double) return value;
+    if (value is num) return value.toDouble();
     return double.tryParse(value?.toString() ?? '');
   }
 

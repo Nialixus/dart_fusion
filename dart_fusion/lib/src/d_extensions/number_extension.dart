@@ -34,14 +34,14 @@ extension NumberExtension<Number extends num> on Number {
           ? max
           : this;
 
-  /// Converts the number to a human-readable string representing bytes, KB, MB, or GB.
+  /// Converts the number to a human-readable string representing bytes, KB, MB, GB, or TB.
   ///
-  /// Returns a string representation of the size in bytes, KB, MB, or GB.
+  /// Returns a string representation of the size in bytes, KB, MB, GB, or TB.
   ///
   /// ```dart
   /// int bytes = 1048576;
   /// String parse = bytes.toReadableBytes;
-  /// print(parse); // "1048.57 KB"
+  /// print(parse); // "1.00 MB"
   /// ```
   String get toReadableBytes {
     if (this < 1024) {
@@ -52,9 +52,12 @@ extension NumberExtension<Number extends num> on Number {
     } else if (this < 1024 * 1024 * 1024) {
       double sizeInMB = this / (1024 * 1024);
       return '${sizeInMB.toStringAsFixed(2)} MB';
-    } else {
-      double sizeInGB = this / (1024 * 1024 * 1024);
+    } else if (this < 1024.0 * 1024 * 1024 * 1024) {
+      double sizeInGB = this / (1024.0 * 1024 * 1024);
       return '${sizeInGB.toStringAsFixed(2)} GB';
+    } else {
+      double sizeInTB = this / (1024.0 * 1024 * 1024 * 1024);
+      return '${sizeInTB.toStringAsFixed(2)} TB';
     }
   }
 

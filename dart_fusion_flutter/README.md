@@ -95,7 +95,7 @@ dependencies:
     git:
       url: https://github.com/Nialixus/dart_fusion.git
       path: dart_fusion
-      ref: v3.1.7
+      ref: v3.1.8
 
   # or import this one instead for flutter project
   
@@ -103,7 +103,7 @@ dependencies:
     git:
       url: https://github.com/Nialixus/dart_fusion.git
       path: dart_fusion_flutter
-      ref: v3.1.7
+      ref: v3.1.8
 ```
 
 also run this command in terminal

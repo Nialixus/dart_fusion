@@ -76,7 +76,7 @@ extension StringExtension on String {
   /// Parse [String] to [double].
   ///
   /// If parsing fails, returns the provided [onError] value, or `0.0` if not specified.
-  double toDouble([double? onError]) => double.tryParse(this) ?? 0.0;
+  double toDouble([double? onError]) => double.tryParse(this) ?? onError ?? 0.0;
 
   /// Try parse [Duration] from [String].
   ///
@@ -95,5 +95,5 @@ extension StringExtension on String {
     Duration? onError,
     DurationType type = DurationType.seconds,
   }) =>
-      int.tryParse(this)?.toDuration(type: type) ?? Duration.zero;
+      int.tryParse(this)?.toDuration(type: type) ?? onError ?? Duration.zero;
 }

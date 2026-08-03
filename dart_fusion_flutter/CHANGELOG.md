@@ -156,3 +156,11 @@
 * Update `DImage` to read base64 image
 * Update `JSONExtension` of
 * Add `JSONExtension` Unit test
+
+## 3.1.8
+* Expose support for passing standard `ImageProvider` directly to `DImage`.
+* Support local file paths (absolute/existing paths) passed as string sources.
+* Handle case-insensitive image extensions and parse network URLs with query parameters/fragments correctly.
+* Inspect `Uint8List` contents dynamically to auto-detect vector (SVG) vs bitmap formats.
+* Add beautiful PDF representation fallback card for `.pdf` sources.
+* Add widget test suite coverage for `DImage`.

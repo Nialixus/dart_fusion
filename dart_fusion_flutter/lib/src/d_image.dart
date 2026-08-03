@@ -193,30 +193,7 @@ class DImage<Source extends Object> extends StatelessWidget {
     try {
       switch (type) {
         case DImageType.auto:
-          if (source is File) {
-            final data = source as File;
-            if (data.path.endsWith('.svg')) return _fromVectorFile();
-            return _fromBitmapFile();
-          } else if (source is Uint8List) {
-            try {
-              return _fromVectorMemory();
-            } catch (e) {
-              return _fromBitmapMemory();
-            }
-          } else {
-            String data = source.toString();
-            if (data.startsWith("http")) {
-              if (data.endsWith(".svg")) return _fromVectorNetwork();
-              return _fromBitmapNetwork();
-            } else if (data.startsWith('data:image')) {
-              if (data.startsWith('data:image/svg')) return _fromVectorMemory();
-              return _fromBitmapMemory();
-            } else {
-              String data = source.toString();
-              if (data.endsWith(".svg")) return _fromVectorAsset();
-              return _fromBitmapAsset();
-            }
-          }
+          return _buildAuto(context);
         case DImageType.bitmapAsset:
           return _fromBitmapAsset();
         case DImageType.bitmapNetwork:
@@ -239,6 +216,70 @@ class DImage<Source extends Object> extends StatelessWidget {
       if (errorBuilder != null) return errorBuilder!(context, e, s);
       return const SizedBox();
     }
+  }
+
+  Widget _buildAuto(BuildContext context) {
+    if (source is ImageProvider) {
+      return _fromImageProvider(source as ImageProvider);
+    }
+
+    if (source is File) {
+      final file = source as File;
+      final path = file.path.toLowerCase();
+      if (path.endsWith('.svg')) return _fromVectorFile();
+      if (path.endsWith('.pdf')) return _fromPdfFile(file.path);
+      return _fromBitmapFile();
+    }
+
+    if (source is Uint8List) {
+      final bytes = source as Uint8List;
+      if (_isSvgBytes(bytes)) return _fromVectorMemory();
+      return _fromBitmapMemory();
+    }
+
+    final data = source.toString();
+    final lowerData = data.toLowerCase();
+
+    // Check base64 data URIs or raw base64 containing SVG content
+    if (lowerData.startsWith('data:')) {
+      final decoded = _decodeStringSource(data);
+      if (lowerData.startsWith('data:image/svg') || _isSvgBytes(decoded)) {
+        return _fromVectorMemory();
+      }
+      return _fromBitmapMemory();
+    }
+
+    // Check network URLs
+    if (lowerData.startsWith('http://') || lowerData.startsWith('https://')) {
+      final uri = Uri.tryParse(data);
+      final path = uri?.path.toLowerCase() ?? '';
+      if (path.endsWith('.svg')) return _fromVectorNetwork();
+      if (path.endsWith('.pdf')) return _fromPdfFile(data);
+      return _fromBitmapNetwork();
+    }
+
+    // Check if it is a local file path (either absolute or existing on filesystem)
+    final file = File(data);
+    if (file.isAbsolute || file.existsSync()) {
+      if (lowerData.endsWith('.svg')) return _fromVectorFile();
+      if (lowerData.endsWith('.pdf')) return _fromPdfFile(data);
+      return _fromBitmapFile();
+    }
+
+    // Check asset paths
+    if (lowerData.endsWith('.svg')) return _fromVectorAsset();
+    if (lowerData.endsWith('.pdf')) return _fromPdfFile(data);
+
+    // Try to decode as raw base64 string
+    try {
+      final decoded = base64Decode(data.trim());
+      if (decoded.isNotEmpty) {
+        if (_isSvgBytes(decoded)) return _fromVectorMemory();
+        return _fromBitmapMemory();
+      }
+    } catch (_) {}
+
+    return _fromBitmapAsset();
   }
 
   Widget _fromBitmapAsset() {
@@ -402,9 +443,7 @@ class DImage<Source extends Object> extends StatelessWidget {
 
   Widget _fromBitmapMemory() {
     return Image.memory(
-      source is Uint8List
-          ? source as Uint8List
-          : base64Decode(source.toString().split(',').last),
+      _decodeStringSource(source),
       fit: fit,
       key: key,
       color: color,
@@ -434,9 +473,7 @@ class DImage<Source extends Object> extends StatelessWidget {
 
   Widget _fromVectorMemory() {
     return SvgPicture.memory(
-      source is Uint8List
-          ? source as Uint8List
-          : base64Decode(source.toString().split(',').last),
+      _decodeStringSource(source),
       fit: fit,
       key: key,
       theme: theme,
@@ -453,6 +490,87 @@ class DImage<Source extends Object> extends StatelessWidget {
       colorBlendMode: colorBlendMode ?? BlendMode.srcIn,
       allowDrawingOutsideViewBox: allowDrawingOutsideViewBox,
     );
+  }
+
+  Widget _fromImageProvider(ImageProvider provider) {
+    return Image(
+      image: provider,
+      fit: fit,
+      key: key,
+      color: color,
+      opacity: opacity,
+      width: size?.width,
+      height: size?.height,
+      alignment: alignment,
+      repeat: repeat,
+      isAntiAlias: isAntiAlias,
+      errorBuilder: errorBuilder,
+      filterQuality: filterQuality,
+      semanticLabel: semanticsLabel,
+      colorBlendMode: colorBlendMode,
+      gaplessPlayback: gaplessPlayback,
+      matchTextDirection: matchTextDirection,
+      excludeFromSemantics: excludeFromSemantics,
+      frameBuilder: (context, child, _, __) {
+        if (placeholderBuilder != null) return placeholderBuilder!(context);
+        return child;
+      },
+    );
+  }
+
+  Widget _fromPdfFile(String path) {
+    final fileName = path.split('/').last.split('\\').last;
+    return Container(
+      width: size?.width,
+      height: size?.height,
+      alignment: alignment,
+      decoration: BoxDecoration(
+        color: Colors.red.withOpacity(0.05),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: Colors.red.withOpacity(0.2)),
+      ),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          const Icon(Icons.picture_as_pdf, color: Colors.red, size: 28),
+          const SizedBox(width: 8),
+          Flexible(
+            child: Text(
+              fileName,
+              style: const TextStyle(
+                fontWeight: FontWeight.w600,
+                fontSize: 13,
+                color: Colors.red,
+              ),
+              overflow: TextOverflow.ellipsis,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Uint8List _decodeStringSource(dynamic src) {
+    if (src is Uint8List) return src;
+    final data = src.toString().trim();
+    if (data.startsWith('data:')) {
+      final commaIndex = data.indexOf(',');
+      if (commaIndex != -1) {
+        return base64Decode(data.substring(commaIndex + 1));
+      }
+    }
+    return base64Decode(data);
+  }
+
+  bool _isSvgBytes(Uint8List bytes) {
+    if (bytes.isEmpty) return false;
+    try {
+      final text = utf8.decode(bytes, allowMalformed: true).trim();
+      return text.toLowerCase().contains('<svg');
+    } catch (_) {
+      return false;
+    }
   }
 
   /// Creates a copy of this [DImage] but with the given fields replaced with the new values.

@@ -1,7 +1,7 @@
 name: dart_fusion_flutter
 description: A library that brings together a harmonious blend of essential
   tools, utilities, and components designed to supercharge your Dart projects.
-version: 3.1.7
+version: 3.1.8
 homepage: https://inidia.app
 repository: https://github.com/Nialixus/dart_fusion.git
 issue_tracker: https://github.com/Nialixus/dart_fusion/issues
@@ -27,7 +27,7 @@ dependencies:
     git:
       url: https://github.com/Nialixus/dart_fusion.git
       path: dart_fusion
-      ref: v3.1.7
+      ref: v3.1.8
   flutter:
     sdk: flutter
   flutter_svg: ^2.0.9

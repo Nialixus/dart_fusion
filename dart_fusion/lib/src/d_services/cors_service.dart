@@ -211,6 +211,11 @@ class Cors extends DModel {
 
     return (context) async {
       try {
+        final origin = context.request.headers['Origin'] ?? context.request.headers['origin'];
+        if (origin == null) {
+          return await handler(context);
+        }
+
         var response = await handler(context);
         response = response.copyWith(
           headers: {
@@ -224,11 +229,6 @@ class Cors extends DModel {
 
         Assert.list(
           children: [
-            response.assertion(
-              context.request.headers['Origin'] != null,
-              'Missing Origin header in the request.',
-              statusCode: 400,
-            ),
             response.assertion(
               isOriginAllowed(context, cors: cors),
               'Access denied for this origin.',
@@ -254,10 +254,14 @@ class Cors extends DModel {
 
         return response.copyWith(headers: {
           ...response.headers,
-          'access-control-allow-origin': context.request.headers['Origin'],
+          'access-control-allow-origin': origin,
           'access-control-allow-methods': addOption(response.headers)
         });
       } on ResponseException catch (e) {
+        final origin = context.request.headers['Origin'] ?? context.request.headers['origin'];
+        if (origin == null) {
+          return e.response;
+        }
         final header = <String, Object>{
           ...Cors.byDefault().toHeader,
           ...toJSON,
@@ -265,7 +269,7 @@ class Cors extends DModel {
         };
         return e.response.copyWith(headers: {
           ...header,
-          'access-control-allow-origin': context.request.headers['Origin'],
+          'access-control-allow-origin': origin,
           'access-control-allow-methods': addOption(header)
         });
       } catch (e) {

@@ -17,12 +17,10 @@ extension ListExtension<OldValue extends Object?> on List<OldValue> {
 
   /// A shortcut of extended sublist with safety.
   List<OldValue> limit(int start, int length) {
-    final end = start + length;
-    return start > this.length
-        ? this
-        : end > this.length
-            ? sublist(start, this.length)
-            : sublist(start, end);
+    final safeStart = start.clamp(0, this.length);
+    final safeLength = length < 0 ? 0 : length;
+    final safeEnd = (safeStart + safeLength).clamp(safeStart, this.length);
+    return sublist(safeStart, safeEnd);
   }
 
   /// A shortcut to get random item inside list.

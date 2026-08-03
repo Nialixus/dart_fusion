@@ -156,3 +156,11 @@
 * Update `DImage` to read base64 image
 * Update `JSONExtension` of
 * Add `JSONExtension` Unit test
+
+## 3.1.8
+* Fix logic flaws and crashes in `JSONExtension.toJSON` and `RequestContextExtension.isWebSocket`.
+* Relax CORS validation bypass when Origin is absent.
+* Update `Header.fromJSON` to match case-insensitively.
+* Optimize logger (`DLog`) to reuse shared instance and map levels by name instead of ordinal indices to prevent verbose log crash.
+* Fix string converter error fallbacks and clamp index values in list limit.
+* Expand unit test suite coverage.

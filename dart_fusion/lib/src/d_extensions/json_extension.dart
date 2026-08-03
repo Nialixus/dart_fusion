@@ -45,16 +45,27 @@ extension JSONExtension on JSON {
 
   /// Parse [FormData] fields to [JSON].
   JSON get toJSON {
-    var data = <String, dynamic>{};
+    final data = <String, dynamic>{};
     for (final entry in entries) {
-      if (entry.key.contains('.')) {
-        final prefix = entry.key.split('.').map((e) => '"$e":').join('{');
-        final suffix =
-            [for (int x = 0; x < entry.key.split('.').length; x++) '}'].join();
-        final complete = '${'{$prefix"'}${entry.value}"$suffix';
-        data = data.merge(jsonDecode(complete) as JSON? ?? {});
+      final key = entry.key;
+      final value = entry.value;
+      if (key.contains('.')) {
+        final parts = key.split('.');
+        Map<String, dynamic> current = data;
+        for (int i = 0; i < parts.length - 1; i++) {
+          final part = parts[i];
+          final existing = current[part];
+          if (existing is Map<String, dynamic>) {
+            current = existing;
+          } else {
+            final nextMap = <String, dynamic>{};
+            current[part] = nextMap;
+            current = nextMap;
+          }
+        }
+        current[parts.last] = value;
       } else {
-        data.addAll({entry.key: entry.value});
+        data[key] = value;
       }
     }
 
